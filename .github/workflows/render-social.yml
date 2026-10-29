@@ -1,0 +1,35 @@
+name: Render Signa Chess Social Graphics
+on:
+  push:
+    branches: [signa-social-assets]
+    paths:
+      - 'signa-social/*.svg'
+      - '.github/workflows/render-social.yml'
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: signa-social-assets
+      - name: Install SVG renderer
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin
+      - name: Render to PNG
+        run: |
+          mkdir -p signa-social/png
+          for f in signa-social/*.svg; do
+            [ -f "$f" ] || continue
+            n=$(basename "$f" .svg)
+            rsvg-convert --width 1080 --height 1350 "$f" > "signa-social/png/$n.png"
+          done
+      - name: Commit PNG images
+        run: |
+          git config user.name 'Signa Social Renderer'
+          git config user.email 'actions@users.noreply.github.com'
+          git add signa-social/png
+          if ! git diff --cached --quiet; then
+            git commit -m 'Render verified Signa social PNG assets'
+            git push origin HEAD:signa-social-assets
+          fi
